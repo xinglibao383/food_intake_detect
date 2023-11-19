@@ -3,8 +3,10 @@ import random
 import numpy as np
 import pandas as pd
 import scipy.io
+import concurrent.futures
+import time
 from datetime import datetime
-from utils import load_config
+from utils import commons
 
 def read_txt_lines(file_path):
     """逐行读取txt文件"""
@@ -84,7 +86,7 @@ def data_split(data_acc, data_gyr, sample_length, stride):
 
         i -= (sample_length - stride)
 
-    print("处理结果: acc数据总条数: {},\tgyr数据总条数: {},\t切割得到样本数量: {}".format(len(data_acc), len(data_gyr), len(result)))
+    print("处理结果: acc数据总条数: {}, gyr数据总条数: {}, 切割得到样本数量: {}".format(str(len(data_acc)).ljust(5), str(len(data_gyr)).ljust(5), str(len(result)).ljust(3)))
 
     return result
 
@@ -129,9 +131,26 @@ def save_111_data(parent_path, data, category_index, person_index, train, eat):
 
 def save_112_data(parent_path, eat_data, not_eat_data, category_index, person_index, train):
     """保存一个类别下一个人的进食和非进食的训练/测试数据"""
-    save_111_data(parent_path, eat_data, category_index, person_index, train, True)
-    save_111_data(parent_path, not_eat_data, category_index, person_index, train, False)
+    # save_111_data(parent_path, eat_data, category_index, person_index, train, True)
+    # save_111_data(parent_path, not_eat_data, category_index, person_index, train, False)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        start_time = time.time()
 
+        task1 = executor.submit(save_111_data, parent_path, eat_data, category_index, person_index, train, True)
+        task2 = executor.submit(save_111_data, parent_path, not_eat_data, category_index, person_index, train, False)
+
+        concurrent.futures.wait([task1, task2], return_when=concurrent.futures.ALL_COMPLETED)
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+        train_or_test = "训练" if train else "测试"
+        print(f"第 {category_index} 类的第 {person_index} 个人的的进食和非进食的{train_or_test}数据保存成功. 耗时: {execution_time} 秒")
+        if task1.result() is not None:
+            print(f"任务1执行失败, 结果: {task1.result()}")
+        if task2.result() is not None:
+            print(f"任务2执行失败, 结果: {task2.result()}")
+
+    executor.shutdown()
 
 def save_all_data_cross_person(original_data_root_path, generated_data_save_path,
                                category_num, person_num, sample_length, stride, train_person_num):
@@ -196,7 +215,7 @@ def save_all_data_not_cross_person(original_data_root_path, generated_data_save_
 
 
 def save_all_data(sample_length, stride, cross_person, train_person_num, train_ratio):
-    config = load_config.load_config_yaml()
+    config = commons.load_config_yaml()
 
     original_data_root_path = config['data']['original_data']['root_path']
     generated_data_save_path = config['data']['generated_data']['save_path']

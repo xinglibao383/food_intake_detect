@@ -2,7 +2,8 @@ import os
 import numpy as np
 import scipy.io
 from torch.utils.data import Dataset, DataLoader
-from utils import data_segment, load_config
+from utils import data_segment, commons
+
 
 class SelfDataset(Dataset):
     def __init__(self, data, targets, transform=None):
@@ -51,18 +52,23 @@ def load_data_from_disk(dir_root_path, train):
     return np.array(acc_gyr_data), np.array(label_data)
 
 
-def load_data():
-    config = load_config.load_config_yaml()
+def load_data(pre_or_post):
+    config = commons.load_config_yaml()
 
     generated_data_save_path = config['data']['generated_data']['save_path']
-    sample_length = config['model']['dataset']['sample_length']
-    stride = config['model']['dataset']['stride']
-    cross_person = config['model']['dataset']['cross_person']
-    train_person_num = config['model']['dataset']['train_person_num']
-    train_ratio = config['model']['dataset']['train_ratio']
-    batch_size = config['model']['train']['data_loader']['batch_size']
-    shuffle = config['model']['train']['data_loader']['shuffle']
-    num_workers = config['model']['train']['data_loader']['num_workers']
+    sample_length = config['train']['dataset']['sample_length']
+    stride = config['train']['dataset']['stride']
+    cross_person = config['train']['dataset']['cross_person']
+    train_person_num = config['train']['dataset']['train_person_num']
+    train_ratio = config['train']['dataset']['train_ratio']
+    if pre_or_post == 'pre':
+        batch_size = config['train']['pre_model']['data_loader']['batch_size']
+        shuffle = config['train']['pre_model']['data_loader']['shuffle']
+        num_workers = config['train']['pre_model']['data_loader']['num_workers']
+    elif pre_or_post == 'post':
+        batch_size = config['train']['post_model']['data_loader']['batch_size']
+        shuffle = config['train']['post_model']['data_loader']['shuffle']
+        num_workers = config['train']['post_model']['data_loader']['num_workers']
 
     if cross_person:
         load_parent_path = os.path.join(generated_data_save_path,

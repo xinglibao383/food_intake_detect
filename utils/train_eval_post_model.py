@@ -33,6 +33,9 @@ def evaluate_acc_loss(net, data_iter, loss, device=None):
 
 
 def train(net, train_iter, test_iter, num_epochs, learning_rate, patience, devices, logger, weights_save_parent_path):
+    animator = None if len(devices) > 1 else d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                                                          legend=['train loss', 'train acc', 'test acc'])
+
     def init_weights(m):
         if type(m) == nn.Linear or type(m) == nn.Conv2d:
             nn.init.xavier_uniform_(m.weight)
@@ -67,11 +70,15 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, patience, devic
             train_l = metric[0] / metric[2]
             train_acc = metric[1] / metric[2]
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                if animator != None:
+                    animator.add(epoch + (i + 1) / num_batches, (train_l, train_acc, None))
                 logger.record_logs([f'epoch: {epoch + 1}, data iter: {i + 1}, train loss: {train_l:.3f}, train acc: {train_acc:.3f}'])
         test_acc, test_loss = evaluate_acc_loss(net, test_iter, loss)
+        if animator != None:
+            animator.add(epoch + 1, (None, None, test_acc))
         logger.record_logs([f'epoch: {epoch + 1}, test acc: {test_acc:.3f}'])
         weights_save_path = os.path.join(weights_save_parent_path, f"epoch_{epoch + 1}.pth")
-        if (epoch + 1) % 5 == 0 or (epoch + 1) == num_epochs:
+        if (epoch + 1) % 5 == 0 or (epoch + 1) == num_epochs or test_loss < best_test_loss:
             torch.save(net.state_dict(), weights_save_path)
         if test_loss < best_test_loss:
             best_test_loss = test_loss
@@ -85,5 +92,6 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, patience, devic
                 logger.record_logs(logs)
                 break
     logs = [f'loss {train_l:.3f}, train acc {train_acc:.3f}, test acc {test_acc:.3f}',
-            f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}']
+            f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}',
+            f"The File name for saving the best model weights: epoch_{best_test_loss_epoch}.pth"]
     logger.record_logs(logs)

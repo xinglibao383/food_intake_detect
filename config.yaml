@@ -5,20 +5,39 @@ data:
     person_num_per_category: 10
   generated_data:
     save_path: "./data"
-model:
-    dataset:
-      sample_length: 512
-      stride: 128
-      cross_person: True
-      train_person_num: 8
-      train_ratio: 0.8
-    train:
-      num_epochs: 10
-      learning_rate: 0.0001
-      patience: 20
-      data_loader:
-        batch_size: 16
-        shuffle: True
-        num_workers: 4
-      # logging_mode: "console" or "tensorboard" or "file"
-      logging_mode: "file"
+
+train:
+  dataset:
+    sample_length: 512
+    stride: 128
+    cross_person: False
+    train_person_num: 8
+    train_ratio: 0.7
+  pre_model:
+    num_epochs: 3
+    learning_rate: 0.0001
+    patience: 20
+    data_loader:
+      batch_size: 16
+      shuffle: True
+      num_workers: 4
+  post_model:
+    basc_c: 2
+    num_epochs: 3
+    learning_rate: 0.0001
+    mask_percentage: 0.8
+    patience: 20
+    data_loader:
+      batch_size: 16
+      shuffle: True
+      num_workers: 4
+  # logging_mode: "console" or "tensorboard" or "file"
+  logging_mode: "file"
+
+deploy:
+  pre_model:
+    basc_c: 2
+    threshold:
+    train_id:
+  post_model:
+    train_id:
