@@ -3,10 +3,10 @@ from torch import nn
 from models import unet
 
 class DualPathUNet(nn.Module):
-    def __init__(self, base_c_1, base_c_2):
+    def __init__(self, base_c_watch, base_c_glasses):
         super(DualPathUNet, self).__init__()
-        self.unet1 = unet.UNet(base_c=base_c_1)
-        self.unet2 = unet.UNet(base_c=base_c_2)
+        self.unet1 = unet.UNet(base_c=base_c_watch)
+        self.unet2 = unet.UNet(base_c=base_c_glasses)
 
 
     def forward(self, x):
@@ -19,6 +19,6 @@ class DualPathUNet(nn.Module):
 if __name__ == '__main__':
     x1 = torch.rand(size=(32, 1, 512, 6))
     x2 = torch.rand(size=(32, 1, 102, 6))
-    net = DualPathUNet()
+    net = DualPathUNet(2, 2)
     y1, y2 = net((x1, x2))
     print(y1.shape, y2.shape)

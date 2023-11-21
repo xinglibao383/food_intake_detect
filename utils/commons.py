@@ -17,9 +17,9 @@ def load_config_yaml(file_path="./config.yaml"):
     return config
 
 
-def get_classify_categories():
-    categories = os.listdir("../data/original_food_intake_data")
-    return [category[3:] for category in categories]
+def get_classify_category_names():
+    names = os.listdir("../data/original_food_intake_data")
+    return [name[3:] for name in names]
 
 
 def load_the_best_weights(model, train_id, pre_or_post):
