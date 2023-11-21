@@ -12,20 +12,20 @@ train:
     stride: 128
     cross_person: False
     train_person_num: 8
-    train_ratio: 0.7
+    train_ratio: 0.8
   pre_model:
-    num_epochs: 3
+    basc_c:
+    num_epochs: 30
     learning_rate: 0.0001
+    mask_percentage: 0.8
     patience: 20
     data_loader:
       batch_size: 16
       shuffle: True
       num_workers: 4
   post_model:
-    basc_c: 2
-    num_epochs: 3
+    num_epochs: 30
     learning_rate: 0.0001
-    mask_percentage: 0.8
     patience: 20
     data_loader:
       batch_size: 16

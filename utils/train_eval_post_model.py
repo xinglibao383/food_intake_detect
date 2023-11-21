@@ -28,7 +28,7 @@ def evaluate_acc_loss(net, data_iter, loss, device=None):
                 X = X.to(device)
             y = y.to(device)
             y_hat = net(X)
-            metric.add(accuracy(y_hat, y), loss(y_hat, y) * X.shape[0], y.shape[0])
+            metric.add(accuracy(y_hat, y), loss(y_hat, y) * y.shape[0], y.shape[0])
     return metric[0] / metric[2], metric[1]
 
 
@@ -59,13 +59,18 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, patience, devic
         for i, (X, y) in enumerate(train_iter):
             timer.start()
             optimizer.zero_grad()
-            X, y = X.to(devices[0]), y.to(devices[0])
+            if isinstance(X, list):
+                # BERT微调所需的
+                X = [x.to(devices[0]) for x in X]
+            else:
+                X = X.to(devices[0])
+            y = y.to(devices[0])
             y_hat = net(X)
             l = loss(y_hat, y)
             l.backward()
             optimizer.step()
             with torch.no_grad():
-                metric.add(l * X.shape[0], accuracy(y_hat, y), X.shape[0])
+                metric.add(l * y.shape[0], accuracy(y_hat, y), y.shape[0])
             timer.stop()
             train_l = metric[0] / metric[2]
             train_acc = metric[1] / metric[2]

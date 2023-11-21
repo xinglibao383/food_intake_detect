@@ -4,7 +4,14 @@ import torch
 from utils import data_segment
 
 
-def load_config_yaml(file_path="config.yaml"):
+def read_txt_lines(file_path):
+    """逐行读取txt文件"""
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+    lines = [line.strip() for line in lines if line.strip()]
+    return lines
+
+def load_config_yaml(file_path="./config.yaml"):
     with open(file_path, 'r') as stream:
         config = yaml.safe_load(stream)
     return config
@@ -30,4 +37,5 @@ def apply_random_mask(samples, mask_percentage=0.8, device=None):
 
 
 if __name__ == '__main__':
-    load_the_best_weights(None, "2023_11_18_22_25_16", 'pre')
+    config = load_config_yaml()
+    print(config)

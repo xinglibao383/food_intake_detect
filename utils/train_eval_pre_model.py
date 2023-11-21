@@ -5,7 +5,7 @@ from d2l import torch as d2l
 from utils import commons
 
 
-def evaluate_loss(net, data_iter, loss, mask_percentage, device=None):
+def evaluate_loss(net, data_iter, loss_function, mask_percentage, device=None):
     if isinstance(net, nn.Module):
         net.eval()  # 设置为评估模式
         if not device:
@@ -15,13 +15,18 @@ def evaluate_loss(net, data_iter, loss, mask_percentage, device=None):
     with torch.no_grad():
         for X, y in data_iter:
             if isinstance(X, list):
-                # BERT微调所需的
                 X = [x.to(device) for x in X]
+                X_masked = [commons.apply_random_mask(x.clone(), mask_percentage, device) for x in X]
             else:
                 X = X.to(device)
-            X_masked = commons.apply_random_mask(X.clone(), mask_percentage, device)
+                X_masked = commons.apply_random_mask(X.clone(), mask_percentage, device)
             X_hat = net(X_masked)
-            metric.add(loss(X_hat, X) * X.shape[0], X.shape[0])
+            if isinstance(X, list):
+                loss = torch.sum(torch.stack([loss_function(x_hat, x) for x_hat, x in zip(X_hat, X)]))
+                metric.add(loss * X[0].shape[0], X[0].shape[0])
+            else:
+                loss = loss_function(X_hat, X)
+                metric.add(loss * X.shape[0], X.shape[0])
     return metric[0] / metric[1]
 
 
@@ -53,14 +58,24 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
         for i, (X, y) in enumerate(train_iter):
             timer.start()
             optimizer.zero_grad()
-            X = X.to(devices[0])
-            X_masked = commons.apply_random_mask(X.clone(), mask_percentage, devices[0])
+            if isinstance(X, list):
+                X = [x.to(devices[0]) for x in X]
+                X_masked = [commons.apply_random_mask(x.clone(), mask_percentage, devices[0]) for x in X]
+            else:
+                X = X.to(devices[0])
+                X_masked = commons.apply_random_mask(X.clone(), mask_percentage, devices[0])
             X_hat = net(X_masked)
-            loss = loss_function(X_hat, X)
+            if isinstance(X, list):
+                loss = torch.sum(torch.stack([loss_function(x_hat, x) for x_hat, x in zip(X_hat, X)]))
+            else:
+                loss = loss_function(X_hat, X)
             loss.backward()
             optimizer.step()
             with torch.no_grad():
-                metric.add(loss * X.shape[0], X.shape[0])
+                if isinstance(X, list):
+                    metric.add(loss * X[0].shape[0], X[0].shape[0])
+                else:
+                    metric.add(loss * X.shape[0], X.shape[0])
             timer.stop()
             train_loss = metric[0] / metric[1]
             if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:

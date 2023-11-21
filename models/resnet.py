@@ -40,14 +40,20 @@ def resnet():
     b3 = nn.Sequential(*resnet_block(64, 128, 2))
     b4 = nn.Sequential(*resnet_block(128, 256, 2))
     b5 = nn.Sequential(*resnet_block(256, 512, 2))
-
-    net = nn.Sequential(b1, b2, b3, b4, b5, nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(), nn.Linear(512, 11))
+    b6 = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten(), nn.Linear(512, 11))
+    net = nn.Sequential(b1, b2, b3, b4, b5, b6)
 
     return net
 
-def test():
-    X = torch.rand(size=(32, 1, 512, 6))
+
+if __name__ == '__main__':
+    X1 = torch.rand(size=(32, 1, 512, 6))
+    X2 = torch.rand(size=(32, 1, 102, 6))
+
     for layer in resnet():
-        print(layer.__class__.__name__)
-        X = layer(X)
-        print(layer.__class__.__name__, "output shape:\t", X.shape)
+        X1 = layer(X1)
+        print(layer.__class__.__name__, "output shape:\t", X1.shape)
+
+    for layer in resnet():
+        X2 = layer(X2)
+        print(layer.__class__.__name__, "output shape:\t", X2.shape)
