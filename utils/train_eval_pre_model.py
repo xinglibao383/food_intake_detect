@@ -1,4 +1,6 @@
 import os
+
+import numpy as np
 import torch
 from torch import nn
 from d2l import torch as d2l
@@ -42,7 +44,7 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
 
     # 在多个GPU上并行训练模型
     net = nn.DataParallel(net, device_ids=devices).to(devices[0])
-    optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate)
+    optimizer = torch.optim.AdamW(net.parameters(), lr=learning_rate)
     # 使用均方误差损失函数
     loss_function = nn.MSELoss()
     timer, num_batches = d2l.Timer(), len(train_iter)
@@ -50,6 +52,9 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
     best_test_loss = float('inf')
     best_test_loss_epoch = 0
     current_patience = 0
+
+    # 阈值
+    test_loss_values = []
 
     for epoch in range(num_epochs):
         # 训练损失之和, 样本数
@@ -83,6 +88,7 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
                     animator.add(epoch + (i + 1) / num_batches, (train_loss, None))
                 logger.record_logs([f'epoch: {epoch + 1}, data iter: {i + 1}, train loss: {train_loss:.3f}'])
         test_loss = evaluate_loss(net, test_iter, loss_function, mask_percentage)
+        test_loss_values.append(test_loss)
         if animator != None:
             animator.add(epoch + 1, (None, test_loss))
         logger.record_logs([f'epoch: {epoch + 1}, test loss: {test_loss:.3f}'])
@@ -97,11 +103,14 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
         else:
             current_patience += 1
             if current_patience >= patience:
-                logs = [f'Early stopping after {epoch} epochs.',
-                        f'The best test loss occurs in the {best_test_loss_epoch} epoch.']
+                logs = [f'Early stopping after {epoch} epochs.']
                 logger.record_logs(logs)
                 break
+
+    threshold = np.percentile(test_loss_values, 25)
+
     logs = [f'train loss {train_loss:.3f}, test loss {test_loss}:.3f',
             f'{metric[1] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}',
+            f"The threshold is {threshold}",
             f"The File name for saving the best model weights: epoch_{best_test_loss_epoch}.pth"]
     logger.record_logs(logs)

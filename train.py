@@ -9,8 +9,8 @@ from utils import logger, commons, train_eval_post_model, train_eval_pre_model, 
 def train_pre_model(config, timestamp):
     logging_mode = config['train']['logging_mode']
 
-    base_c_watch = config['train']['pre_model']['basc_c_watch']
-    base_c_glasses = config['train']['pre_model']['basc_c_glasses']
+    base_c_watch = config['train']['pre_model']['base_c_watch']
+    base_c_glasses = config['train']['pre_model']['base_c_glasses']
     num_epochs = config['train']['pre_model']['num_epochs']
     learning_rate = config['train']['pre_model']['learning_rate']
     mask_percentage = config['train']['pre_model']['mask_percentage']
@@ -49,5 +49,5 @@ if __name__ == "__main__":
     config = commons.load_config_yaml()
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
-    train_pre_model(config, timestamp)
-    # train_post_model(config, timestamp)
+    # train_pre_model(config, timestamp)
+    train_post_model(config, timestamp)

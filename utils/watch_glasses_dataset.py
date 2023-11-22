@@ -54,9 +54,13 @@ def load_data_from_disk(dir_root_path, sample_length, train, eat=True):
 
                 if device == "watch":
                     data_watch.append(acc_gyr)
-
+                    # 注意!!! 注意!!! 注意!!! 如果是非进食样本, one-hot标签内元素全为零
+                    # 注意!!! 注意!!! 注意!!! 如果是非进食样本, one-hot标签内元素全为零
                     one_hot_label = np.zeros(11)
-                    one_hot_label[mat_data["label"][0][0] - 1] = 1
+                    if mat_data["label"][0][0] != 0:
+                        one_hot_label[mat_data["label"][0][0] - 1] = 1
+                    # 注意!!! 注意!!! 注意!!! 如果是非进食样本, one-hot标签内元素全为零
+                    # 注意!!! 注意!!! 注意!!! 如果是非进食样本, one-hot标签内元素全为零
                     data_label.append(one_hot_label)
                 else:
                     data_glasses.append(acc_gyr)
@@ -89,10 +93,13 @@ def load_data(pre_or_post, use_for_final_test=False):
     if use_for_final_test:
         # test_eat_data_watch, test_eat_data_glasses, test_eat_data_label = load_data_from_disk(load_parent_path, sample_length, False, True)
         # test_not_eat_data_watch, test_not_eat_data_glasses, test_not_eat_data_label = load_data_from_disk(load_parent_path, sample_length, False, False)
+        # 将用于训练的非进食数据（实际上并不会用于训练）用于测试（包括进食和非进食）
+        train_not_eat_data = load_data_from_disk(load_parent_path, sample_length, True, False)
         test_eat_data = load_data_from_disk(load_parent_path, sample_length, False, True)
         test_not_eat_data = load_data_from_disk(load_parent_path, sample_length, False, False)
 
-        test_data = [torch.cat((torch.tensor(data1), torch.tensor(data2)), dim=0) for data1, data2 in zip(test_eat_data, test_not_eat_data)]
+        test_data = [torch.cat((torch.tensor(data1), torch.tensor(data2), torch.tensor(data3)), dim=0)
+                     for data1, data2, data3 in zip(train_not_eat_data, test_eat_data, test_not_eat_data)]
         print(f"共载入 {test_data[0].shape[0]} 条进食和非进食数据用于最终测试, 其中包含 {test_eat_data[0].shape[0]} 条进食数据")
         return DataLoader(WatchGlassesDataset(*test_data), batch_size, shuffle=False, num_workers=num_workers)
 
@@ -111,11 +118,12 @@ if __name__ == '__main__':
     # for data in load_data_from_disk("../data/512_128_0.8_not_cross_person", 512, True, False):
     #     print(data.shape)
 
-    train_iter, test_iter = load_data('post')
-    for X, y in train_iter:
-        print(isinstance(X, list), len(X), isinstance(X[0], list), X[0].shape, X[1].shape)
+    # train_iter, test_iter = load_data('post')
+    # for X, y in train_iter:
+    #     print(isinstance(X, list), len(X), isinstance(X[0], list), X[0].shape, X[1].shape)
 
 
-    # data_iter = load_data(None, True)
-    # for X, y in data_iter:
-    #     print(isinstance(X, list), len(X), isinstance(X[0], list), X[0].shape, X[1].shape, y.shape)
+    data_iter = load_data(None, True)
+    for X, y in data_iter:
+        # print(isinstance(X, list), len(X), isinstance(X[0], list), X[0].shape, X[1].shape, y.shape)
+        print(y[0])

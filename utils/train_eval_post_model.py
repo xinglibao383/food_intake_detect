@@ -92,8 +92,7 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, patience, devic
         else:
             current_patience += 1
             if current_patience >= patience:
-                logs = [f'Early stopping after {epoch} epochs.',
-                        f'The best test loss occurs in the {best_test_loss_epoch} epoch.']
+                logs = [f'Early stopping after {epoch} epochs.']
                 logger.record_logs(logs)
                 break
     logs = [f'loss {train_l:.3f}, train acc {train_acc:.3f}, test acc {test_acc:.3f}',
