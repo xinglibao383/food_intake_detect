@@ -82,9 +82,14 @@ def data_split(data_watch_acc, data_watch_gyr, data_glasses, sample_length, stri
     watch_length = min(len(data_watch_acc), len(data_watch_gyr)) - sample_length
     glasses_length = len(data_glasses) - sample_length // 5
 
+    # 如果一类下一个人的进食/非进食的手表/眼镜数据不足以构成一个样本, 则丢弃其与对应的眼镜/手表数据
+    # 通常这种情况发生在一类下一个人的非进食的眼镜数据不足以构成一个样本, 因此丢弃其与对应的手表数据
+    if watch_length <= 0 or glasses_length <= 0:
+        return None, None
+
     for i in range(0, watch_length, stride):
         # 将手表陀螺仪数据与手表加速度计数据对齐
-        align_watch_gyr_index, align_watch_gyr_time_diff = i, abs((data_watch_acc[i][3] - data_watch_gyr[0][3]).total_seconds() * 1000)
+        align_watch_gyr_index, align_watch_gyr_time_diff = 0, abs((data_watch_acc[i][3] - data_watch_gyr[0][3]).total_seconds() * 1000)
         for j in range(0, watch_length):
             if abs((data_watch_acc[i][3] - data_watch_gyr[j][3]).total_seconds() * 1000) < align_watch_gyr_time_diff:
                 align_watch_gyr_index = j
@@ -96,12 +101,13 @@ def data_split(data_watch_acc, data_watch_gyr, data_glasses, sample_length, stri
         splited_data_watch.append(data_watch_sub_matrix)
 
         # 将眼镜数据与手表加速度计数据对齐
-        align_glasses_index, align_glasses_time_diff = i, abs((data_watch_acc[i][3] - data_glasses[0][0]).total_seconds() * 1000)
+        align_glasses_index, align_glasses_time_diff = 0, abs((data_watch_acc[i][3] - data_glasses[0][0]).total_seconds() * 1000)
         for k in range(0, glasses_length):
             if abs((data_watch_acc[i][3] - data_glasses[k][0]).total_seconds() * 1000) < align_glasses_time_diff:
                 align_glasses_index = k
                 align_glasses_time_diff = abs((data_watch_acc[i][3] - data_glasses[k][0]).total_seconds() * 1000)
-        splited_data_glasses.append(np.array(data_glasses[align_glasses_index: align_glasses_index + sample_length // 5, 1:], dtype=np.single))
+        splited_data_glasses.append(np.array(data_glasses[align_glasses_index: align_glasses_index + (sample_length // 5), 1:], dtype=np.single))
+
 
     print("手表处理结果: 数据总条数 {}, 切割得到样本数量 {}".format(str(min(len(data_watch_acc), len(data_watch_gyr))).ljust(5),
                                                                     str(len(splited_data_watch)).ljust(3)))
@@ -121,6 +127,7 @@ def get_split_sensor_data(range_csv_path, timestamp_txt_path, data_origin_path, 
 
 
     watch_eat_data, glasses_eat_data = data_split(data_eat_watch_acc, data_eat_watch_gyr, data_eat_glasses, sample_length, stride)
+    # watch_not_eat_data, glasses_not_eat_data 可能为 None, None
     watch_not_eat_data, glasses_not_eat_data = data_split(data_not_eat_watch_acc, data_not_eat_watch_gyr, data_not_eat_glasses, sample_length, stride)
 
     return watch_eat_data, watch_not_eat_data, glasses_eat_data, glasses_not_eat_data
@@ -149,7 +156,8 @@ def save_111_data(parent_path, data, category_index, person_index, watch, train,
                                               str(i).zfill(zfill_size))
         mat_file_path = os.path.join(parent_path, mat_file_name)
         os.makedirs(os.path.dirname(mat_file_path), exist_ok=True)
-        scipy.io.savemat(mat_file_path, {"accData": acc_data, "gyrData": gyr_data, "label": label_data, "person": person_data})
+        if acc_data.shape[0] > 0:
+            scipy.io.savemat(mat_file_path, {"accData": acc_data, "gyrData": gyr_data, "label": label_data, "person": person_data})
 
 
 def save_114_data(parent_path, data, category_index, person_index, train):
@@ -157,12 +165,14 @@ def save_114_data(parent_path, data, category_index, person_index, train):
 
     start_time = time.time()
 
-    # watch_eat_data, watch_not_eat_data, glasses_eat_data, glasses_not_eat_data
     # parent_path, data, category_index, person_index, watch, train, eat
-    save_111_data(parent_path, data[0], category_index, person_index, True, train, True)
-    save_111_data(parent_path, data[1], category_index, person_index, True, train, False)
-    save_111_data(parent_path, data[2], category_index, person_index, False, train, True)
-    save_111_data(parent_path, data[3], category_index, person_index, False, train, False)
+    watch_eat_data, watch_not_eat_data, glasses_eat_data, glasses_not_eat_data = data
+    if watch_eat_data is not None and glasses_eat_data is not None:
+        save_111_data(parent_path, watch_eat_data, category_index, person_index, True, train, True)
+        save_111_data(parent_path, glasses_eat_data, category_index, person_index, False, train, True)
+    if watch_not_eat_data is not None and glasses_not_eat_data is not None:
+        save_111_data(parent_path, watch_not_eat_data, category_index, person_index, True, train, False)
+        save_111_data(parent_path, glasses_not_eat_data, category_index, person_index, False, train, False)
 
     end_time = time.time()
     execution_time = end_time - start_time
@@ -198,7 +208,7 @@ def save_all_data(data_save_root_path, sample_length, stride, cross_person, trai
     # 加载配置文件并读取配置信息
     config = commons.load_config_yaml()
     original_data_root_path = config['data']['original_data']['root_path']
-    generated_data_save_path = config['data']['generated_data']['save_path']
+    # generated_data_save_path = config['data']['generated_data']['save_path']
     category_num = config['data']['original_data']['category_num']
     person_num = config['data']['original_data']['person_num_per_category']
 
@@ -230,6 +240,7 @@ def save_all_data(data_save_root_path, sample_length, stride, cross_person, trai
             # watch_eat_data, watch_not_eat_data, glasses_eat_data, glasses_not_eat_data
             data = get_split_sensor_data(range_csv_path, timestamp_txt_path,
                                          data_origin_path, sample_length, stride)
+
             if cross_person:
                 # 划分训练数据与验证数据
                 is_train_person = j <= train_person_num
@@ -238,14 +249,18 @@ def save_all_data(data_save_root_path, sample_length, stride, cross_person, trai
                 # 划分训练数据与验证数据
                 train_data, test_data = [], []
                 for sub_data in data:
-                    sub_data_len = len(sub_data)
-                    sub_data_partition_num = int(sub_data_len * train_ratio)
-                    sub_data_train, sub_data_test = sub_data[:sub_data_partition_num], sub_data[sub_data_partition_num:]
-                    train_data.append(sub_data_train)
-                    test_data.append(sub_data_test)
+                    if sub_data is not None:
+                        sub_data_len = len(sub_data)
+                        sub_data_partition_num = int(sub_data_len * train_ratio)
+                        sub_data_train, sub_data_test = sub_data[:sub_data_partition_num], sub_data[sub_data_partition_num:]
+                        train_data.append(sub_data_train)
+                        test_data.append(sub_data_test)
+                    else:
+                        train_data.append(None)
+                        test_data.append(None)
                 save_114_data(data_save_root_path, train_data, i, j, True)
                 save_114_data(data_save_root_path, test_data, i, j, False)
 
 
 if __name__ == '__main__':
-    save_all_data(512, 128, False, 8, 0.8)
+    save_all_data("../data/512_128_0.8_not_cross_person", 512, 128, False, 8, 0.8)
