@@ -11,6 +11,7 @@ def read_txt_lines(file_path):
     lines = [line.strip() for line in lines if line.strip()]
     return lines
 
+
 def load_config_yaml(file_path="./config.yaml"):
     with open(file_path, 'r') as stream:
         config = yaml.safe_load(stream)
@@ -52,7 +53,6 @@ def clean_all_logs_weights():
                     shutil.rmtree(item_path)
                 else:
                     os.remove(item_path)
-
 
 
 if __name__ == '__main__':
