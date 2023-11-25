@@ -6,6 +6,15 @@ data:
   generated_data:
     save_path: "./data"
 
+post_models:
+  resnet:
+  cross_vit:
+    embed_dim: 32
+    num_heads: 2
+    num_layers: 2
+    mlp_dim: 32
+    dropout: 0.1
+
 train:
   dataset:
     sample_length: 512
@@ -25,12 +34,13 @@ train:
       shuffle: True
       num_workers: 4
   post_model:
+    model_name: "CrossVit"
     num_epochs: 15
-    learning_rate: 0.0001
+    learning_rate: 0.001
     patience: 5
     # use for train the post model or deploy test the whole model
     data_loader:
-      batch_size: 32
+      batch_size: 16
       shuffle: True
       num_workers: 4
   # logging_mode: "console" or "tensorboard" or "file"
