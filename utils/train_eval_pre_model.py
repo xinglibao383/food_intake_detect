@@ -49,6 +49,7 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
     loss_function = nn.MSELoss()
     timer, num_batches = d2l.Timer(), len(train_iter)
 
+    best_weights = net.state_dict()
     best_test_loss = float('inf')
     best_test_loss_epoch = 0
     current_patience = 0
@@ -93,10 +94,10 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
             animator.add(epoch + 1, (None, test_loss))
         logger.record_logs([f'epoch: {epoch + 1}, test loss: {test_loss:.3f}'])
         weights_save_path = os.path.join(weights_save_parent_path, f"epoch_{epoch + 1}.pth")
-        # if (epoch + 1) % 5 == 0 or (epoch + 1) == num_epochs:
-        #     torch.save(net.state_dict(), weights_save_path)
-        torch.save(net.state_dict(), weights_save_path)
+        if (epoch + 1) % 5 == 0 or (epoch + 1) == num_epochs:
+            torch.save(net.state_dict(), weights_save_path)
         if test_loss < best_test_loss:
+            best_weights = net.state_dict()
             best_test_loss = test_loss
             best_test_loss_epoch = epoch + 1
             current_patience = 0
@@ -107,10 +108,8 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
                 logger.record_logs(logs)
                 break
 
-    threshold = np.percentile(test_loss_values, 25)
-
-    logs = [f'train loss {train_loss:.3f}, test loss {test_loss}:.3f',
-            f'{metric[1] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}',
-            f"The threshold is {threshold}",
-            f"The File name for saving the best model weights: epoch_{best_test_loss_epoch}.pth"]
+    torch.save(best_weights, os.path.join(weights_save_parent_path, "best_model_weights.pth"))
+    threshold = np.percentile(test_loss_values[:best_test_loss_epoch], 25)
+    logs = [f"The threshold is {threshold}",
+            f'{metric[1] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}']
     logger.record_logs(logs)

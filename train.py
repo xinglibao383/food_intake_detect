@@ -20,7 +20,8 @@ def train_pre_model(config, timestamp):
     weights_save_parent_path = os.path.join("./weights", 'pre_model', timestamp)
     os.makedirs(weights_save_parent_path, exist_ok=True)
     logs_file_save_path = os.path.join("./logs", 'pre_model', timestamp + ".txt")
-    my_logger = logger.Logger(logging_mode, logs_file_save_path)
+    config_file_save_path = os.path.join("./logs", 'pre_model', timestamp + ".yaml")
+    my_logger = logger.Logger(logging_mode, logs_file_save_path, config_file_save_path)
 
     train_eval_pre_model.train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage, patience,
                                d2l.try_all_gpus(), my_logger, weights_save_parent_path)
@@ -32,6 +33,8 @@ def train_post_model(config, timestamp):
     learning_rate = config['train']['post_model']['learning_rate']
     patience = config['train']['post_model']['patience']
 
+    """
+    # 以下代码封装到 commons.py 内部
     post_model_name = config['train']['post_model']['model_name']
     if post_model_name == 'ResNet':
         net = dual_path_resnet.DualPathResNet()
@@ -44,12 +47,15 @@ def train_post_model(config, timestamp):
         dropout = config['post_models']['cross_vit']['dropout']
 
         net = dual_path_cross_vit.CrossViT(1, 1, embed_dim, num_heads, num_classes, num_layers, mlp_dim, dropout)
+    """
 
+    net = commons.choice_which_post_model(True)
     train_iter, test_iter = watch_glasses_dataset.load_data('post')
     weights_save_parent_path = os.path.join("./weights", "post_model", timestamp)
     os.makedirs(weights_save_parent_path, exist_ok=True)
     logs_file_save_path = os.path.join("./logs", "post_model", timestamp + ".txt")
-    my_logger = logger.Logger(logging_mode, logs_file_save_path)
+    config_file_save_path = os.path.join("./logs", 'post_model', timestamp + ".yaml")
+    my_logger = logger.Logger(logging_mode, logs_file_save_path, config_file_save_path)
 
     train_eval_post_model.train(net, train_iter, test_iter, num_epochs, learning_rate, patience,
                                 d2l.try_all_gpus(), my_logger, weights_save_parent_path)

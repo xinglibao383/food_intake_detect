@@ -3,6 +3,8 @@ import shutil
 import yaml
 import torch
 
+from models import dual_path_resnet, dual_path_cross_vit
+
 
 def read_txt_lines(file_path):
     """逐行读取txt文件"""
@@ -23,13 +25,41 @@ def get_classify_category_names():
     return [name[3:] for name in names]
 
 
+# def load_the_best_weights(model, train_id, pre_or_post):
+#     model = torch.nn.DataParallel(model)
+#     lines = read_txt_lines(os.path.join("./logs", f"{pre_or_post}_model", f"{train_id}.txt"))
+#     pth_file_name = lines[-1].split(": ")[-1]
+#     state_dict_path = os.path.join("./weights", f"{pre_or_post}_model", train_id, pth_file_name)
+#     state_dict = torch.load(state_dict_path)
+#     model.load_state_dict(state_dict)
+#     return model
+
+
 def load_the_best_weights(model, train_id, pre_or_post):
     model = torch.nn.DataParallel(model)
-    lines = read_txt_lines(os.path.join("./logs", f"{pre_or_post}_model", f"{train_id}.txt"))
-    pth_file_name = lines[-1].split(": ")[-1]
-    state_dict_path = os.path.join("./weights", f"{pre_or_post}_model", train_id, pth_file_name)
+    state_dict_path = os.path.join("./weights", f"{pre_or_post}_model", train_id, "best_model_weights.pth")
     state_dict = torch.load(state_dict_path)
     model.load_state_dict(state_dict)
+    return model
+
+
+def choice_which_post_model(for_train, train_id=None):
+    config_path = "./config.yaml" if for_train else os.path.join("./logs", "post_model", f"{train_id}.yaml")
+    config = load_config_yaml(config_path)
+
+    post_model_name = config['train']['post_model']['model_name']
+    if post_model_name == 'ResNet':
+        model = dual_path_resnet.DualPathResNet()
+    elif post_model_name == "CrossVit":
+        embed_dim = config['post_models']['cross_vit']['embed_dim']
+        num_heads = config['post_models']['cross_vit']['num_heads']
+        num_classes = config['data']['original_data']['category_num']
+        num_layers = config['post_models']['cross_vit']['num_layers']
+        mlp_dim = config['post_models']['cross_vit']['mlp_dim']
+        dropout = config['post_models']['cross_vit']['dropout']
+
+        model = dual_path_cross_vit.CrossViT(1, 1, embed_dim, num_heads, num_classes, num_layers, mlp_dim, dropout)
+
     return model
 
 

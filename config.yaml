@@ -9,11 +9,14 @@ data:
 post_models:
   resnet:
   cross_vit:
+    # dimensionality of the embeddings for image patches
     embed_dim: 32
     num_heads: 2
+    # number of CrossViTBlocks in the model
     num_layers: 2
-    mlp_dim: 32
-    dropout: 0.1
+    # dimensionality of the intermediate layer in the MLP
+    mlp_dim: 64
+    dropout: 0.5
 
 train:
   dataset:
@@ -34,9 +37,10 @@ train:
       shuffle: True
       num_workers: 4
   post_model:
+    # model_name: "ResNet" or "CrossVit"
     model_name: "CrossVit"
-    num_epochs: 15
-    learning_rate: 0.001
+    num_epochs: 10
+    learning_rate: 0.003
     patience: 5
     # use for train the post model or deploy test the whole model
     data_loader:
@@ -48,10 +52,10 @@ train:
 
 deploy:
   pre_model:
-    train_id: "2023_11_22_15_40_48"
+    train_id:
     base_c_watch: 32
     base_c_glasses: 16
     mask_percentage: 0.75
     threshold: 31.442
   post_model:
-    train_id: "2023_11_22_16_24_01"
+    train_id:
