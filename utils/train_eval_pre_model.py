@@ -18,11 +18,12 @@ def evaluate_loss(net, data_iter, loss_function, mask_percentage, device=None):
         for X, y in data_iter:
             if isinstance(X, list):
                 X = [x.to(device) for x in X]
-                X_masked = [commons.apply_random_mask(x.clone(), mask_percentage, device) for x in X]
+                # X_masked = [commons.apply_random_mask(x.clone(), mask_percentage, device) for x in X]
             else:
                 X = X.to(device)
-                X_masked = commons.apply_random_mask(X.clone(), mask_percentage, device)
-            X_hat = net(X_masked)
+                # X_masked = commons.apply_random_mask(X.clone(), mask_percentage, device)
+            # X_hat = net(X_masked)
+            X_hat = net(X)
             if isinstance(X, list):
                 loss = torch.sum(torch.stack([loss_function(x_hat, x) for x_hat, x in zip(X_hat, X)]))
                 metric.add(loss * X[0].shape[0], X[0].shape[0])

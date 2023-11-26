@@ -3,7 +3,7 @@ import shutil
 import yaml
 import torch
 
-from models import dual_path_resnet, dual_path_cross_vit
+from models import dual_path_resnet, dual_path_cross_vit, dual_path_unet
 
 
 def read_txt_lines(file_path):
@@ -41,6 +41,18 @@ def load_the_best_weights(model, train_id, pre_or_post):
     state_dict = torch.load(state_dict_path)
     model.load_state_dict(state_dict)
     return model
+
+
+def create_the_pre_model(train_id):
+    config = load_config_yaml(os.path.join("./logs/pre_model", f"{train_id}.yaml"))
+
+    base_c_watch = config['train']['pre_model']['base_c_watch']
+    base_c_glasses = config['train']['pre_model']['base_c_glasses']
+    model = dual_path_unet.DualPathUNet(base_c_watch, base_c_glasses)
+
+    mask_percentage = config['train']['pre_model']['base_c_watch']
+
+    return model, mask_percentage
 
 
 def choice_which_post_model(for_train, train_id=None):

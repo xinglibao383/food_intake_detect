@@ -16,7 +16,7 @@ post_models:
     num_layers: 2
     # dimensionality of the intermediate layer in the MLP
     mlp_dim: 64
-    dropout: 0.5
+    dropout: 0.1
 
 train:
   dataset:
@@ -27,11 +27,11 @@ train:
     train_ratio: 0.8
   pre_model:
     base_c_watch: 32
-    base_c_glasses: 16
-    num_epochs: 50
-    learning_rate: 0.003
-    mask_percentage: 0.75
-    patience: 5
+    base_c_glasses: 6
+    num_epochs: 300
+    learning_rate: 0.0003
+    mask_percentage: 0.5
+    patience: 15
     data_loader:
       batch_size: 32
       shuffle: True
@@ -39,9 +39,9 @@ train:
   post_model:
     # model_name: "ResNet" or "CrossVit"
     model_name: "CrossVit"
-    num_epochs: 10
-    learning_rate: 0.003
-    patience: 5
+    num_epochs: 100
+    learning_rate: 0.0003
+    patience: 20
     # use for train the post model or deploy test the whole model
     data_loader:
       batch_size: 16
@@ -52,10 +52,7 @@ train:
 
 deploy:
   pre_model:
-    train_id:
-    base_c_watch: 32
-    base_c_glasses: 16
-    mask_percentage: 0.75
-    threshold: 31.442
+    train_id: "2023_11_26_17_47_49"
+    threshold: 3.411
   post_model:
-    train_id:
+    train_id: "2023_11_25_21_56_45"

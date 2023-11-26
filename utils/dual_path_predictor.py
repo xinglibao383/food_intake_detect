@@ -12,9 +12,10 @@ class DualPathPredictor:
         self.device = d2l.try_gpu(0)
         self.loss_function = nn.MSELoss(reduction='none')
         self.data_iter = watch_glasses_dataset.load_data(None, True)
-        pre_model = dual_path_unet.DualPathUNet(self.config['base_c_watch'], self.config['base_c_glasses'])
+        pre_model, mask_percentage = commons.create_the_pre_model(self.config['pre_model_train_id'])
         pre_model = commons.load_the_best_weights(pre_model, self.config['pre_model_train_id'], 'pre').to(self.device).eval()
         self.pre_model = pre_model
+        self.mask_percentage = mask_percentage
         post_model = commons.choice_which_post_model(False, self.config['post_model_train_id'])
         post_model = commons.load_the_best_weights(post_model, self.config['post_model_train_id'], 'post').to(self.device).eval()
         self.post_model = post_model
@@ -66,16 +67,22 @@ class DualPathPredictor:
         print(f"M1 + M2 成功分类 {int(metric[1]) + int(metric[2])} 个样本, 准确率为 {(int(metric[1]) + int(metric[2])) / int(sample_count[0]) * 100:.2f}%")
 
 
-    def predict_batch(self, data, mask_or_not=True):
+    def predict_batch(self, data, mask_or_not=False):
         with torch.no_grad():
+            batch_size = data[0].shape[0]
             data = [x.to(self.device) for x in data]
             if mask_or_not:
-                data_masked = [commons.apply_random_mask(x.clone(), self.config['mask_percentage'], self.device) for x in data]
+                data_masked = [commons.apply_random_mask(x.clone(), self.mask_percentage, self.device) for x in data]
                 pre_model_result = self.pre_model(data_masked)
             else:
                 pre_model_result = self.pre_model(data)
             dual_loss = [self.loss_function(x_hat, x) for x_hat, x in zip(pre_model_result, data)]
             loss = dual_loss[0].mean(dim=(1, 2, 3)) + dual_loss[1].mean(dim=(1, 2, 3))
+            # 下面三行代码是上面两行代码的等价写法
+            # dual_loss = [self.loss_function(x_hat.view(batch_size, -1), x.view(batch_size, -1)) for x_hat, x in zip(pre_model_result, data)]
+            # dual_loss = [torch.mean(loss, dim=1) for loss in dual_loss]
+            # loss = dual_loss[0] + dual_loss[1]
+            print(loss)
             pre_model_result_mask = (loss < self.config['threshold']).to(self.device)
             data = [x[pre_model_result_mask] for x in data]
 
