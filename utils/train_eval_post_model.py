@@ -50,6 +50,7 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, patience, devic
 
     best_weights = net.state_dict()
     best_test_loss = float('inf')
+    best_test_loss_epoch = 0
     current_patience = 0
 
     for epoch in range(num_epochs):
@@ -81,21 +82,23 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, patience, devic
         test_acc, test_loss = evaluate_acc_loss(net, test_iter, loss)
         if animator != None:
             animator.add(epoch + 1, (None, None, test_acc))
-        logger.record_logs([f'epoch: {epoch + 1}, test acc: {test_acc:.3f}'])
+        logger.record_logs([f'epoch: {epoch + 1}, current patience: {current_patience + 1}, test acc: {test_acc:.3f}'])
         weights_save_path = os.path.join(weights_save_parent_path, f"epoch_{epoch + 1}.pth")
         if (epoch + 1) % 5 == 0 or (epoch + 1) == num_epochs:
             torch.save(net.state_dict(), weights_save_path)
         if test_loss < best_test_loss:
             best_weights = net.state_dict()
             best_test_loss = test_loss
+            best_test_loss_epoch = epoch + 1
             current_patience = 0
         else:
             current_patience += 1
             if current_patience >= patience:
-                logs = [f'Early stopping after {epoch} epochs.']
+                logs = [f'Early stopping after {epoch + 1} epochs']
                 logger.record_logs(logs)
                 break
 
     torch.save(best_weights, os.path.join(weights_save_parent_path, "best_model_weights.pth"))
-    logs = [f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}']
+    logs = [f"The best testing loss occurred in the {best_test_loss_epoch} epoch",
+            f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}']
     logger.record_logs(logs)

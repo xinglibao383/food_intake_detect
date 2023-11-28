@@ -93,7 +93,7 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
         test_loss_values.append(test_loss)
         if animator != None:
             animator.add(epoch + 1, (None, test_loss))
-        logger.record_logs([f'epoch: {epoch + 1}, test loss: {test_loss:.3f}'])
+        logger.record_logs([f'epoch: {epoch + 1}, current patience: {current_patience + 1}, test loss: {test_loss:.3f}'])
         weights_save_path = os.path.join(weights_save_parent_path, f"epoch_{epoch + 1}.pth")
         if (epoch + 1) % 5 == 0 or (epoch + 1) == num_epochs:
             torch.save(net.state_dict(), weights_save_path)
@@ -105,12 +105,13 @@ def train(net, train_iter, test_iter, num_epochs, learning_rate, mask_percentage
         else:
             current_patience += 1
             if current_patience >= patience:
-                logs = [f'Early stopping after {epoch} epochs.']
+                logs = [f'Early stopping after {epoch + 1} epochs']
                 logger.record_logs(logs)
                 break
 
     torch.save(best_weights, os.path.join(weights_save_parent_path, "best_model_weights.pth"))
     threshold = np.percentile(test_loss_values[:best_test_loss_epoch], 25)
-    logs = [f"The threshold is {threshold}",
+    logs = [f"The best testing loss occurred in the {best_test_loss_epoch} epoch",
+            f"The threshold is {threshold}",
             f'{metric[1] * num_epochs / timer.sum():.1f} examples/sec on {str(devices)}']
     logger.record_logs(logs)
