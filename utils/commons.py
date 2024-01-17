@@ -2,8 +2,15 @@ import os
 import shutil
 import yaml
 import torch
+import torch.nn as nn
 
 from models import dual_path_resnet, dual_path_cross_vit, dual_path_unet
+
+
+def record_experiment_results(file_name, logs):
+    with open(os.path.join("./logs/experiments", file_name), "a", encoding='utf-8') as log_file:
+        for log in logs:
+            log_file.write(log + "\n")
 
 
 def read_txt_lines(file_path):
@@ -95,6 +102,75 @@ def clean_all_logs_weights():
                     shutil.rmtree(item_path)
                 else:
                     os.remove(item_path)
+
+
+def z_score_normalize(imu_data):
+    reshaped_imu_data = imu_data.view(-1, 6)
+
+    mean_vals = torch.mean(reshaped_imu_data, dim=0)
+    std_vals = torch.std(reshaped_imu_data, dim=0)
+    normalized_imu_data = (reshaped_imu_data - mean_vals) / std_vals
+
+    return normalized_imu_data.view(imu_data.shape)
+
+
+def min_max_normalize(imu_data):
+    reshaped_imu_data = imu_data.view(-1, 6)
+
+    min_vals, _ = torch.min(reshaped_imu_data, dim=0)
+    max_vals, _ = torch.max(reshaped_imu_data, dim=0)
+    normalized_imu_data = (reshaped_imu_data - min_vals) / (max_vals - min_vals)
+
+    return normalized_imu_data.view(imu_data.shape)
+
+
+def preprocess_inputs(input1, input2, channel_num=3):
+    # input1 = min_max_normalize(input1)
+    # input2 = min_max_normalize(input2)
+
+    # input1 = z_score_normalize(input1)
+    # input2 = z_score_normalize(input2)
+
+    input1 = torch.cat([input1.repeat(1, 1, 1, 22)], dim=3).repeat(1, channel_num, 1, 1)[:, :, :, :128]
+    input2 = torch.cat([input2.repeat_interleave(5, dim=-2).repeat(1, 1, 1, 22)], dim=3).repeat(1, channel_num, 1, 1)[:, :, :, :128]
+    input2 = torch.cat([input2[:, :, 0:1, :], input2, input2[:, :, -1:, :]], dim=2)
+
+    input = torch.cat((input1, input2), dim=-1)
+
+    return input
+
+
+def z_score_normalize_v2(imu_data):
+    """imu_data batch_size * 12 * 512"""
+    imu_data = imu_data.permute(0, 2, 1)
+    reshaped_imu_data = imu_data.reshape(-1, 12)
+
+    mean_vals = torch.mean(reshaped_imu_data, dim=0)
+    std_vals = torch.std(reshaped_imu_data, dim=0)
+    normalized_imu_data = (reshaped_imu_data - mean_vals) / std_vals
+
+    return normalized_imu_data.reshape(imu_data.shape).permute(0, 2, 1)
+
+
+def preprocess_inputs_v2(input1, input2, normalize=True):
+    input1, input2 = input1.squeeze(1).permute(0, 2, 1), input2.squeeze(1).permute(0, 2, 1)
+    input1 = input1[:, :, 1:input1.shape[2] - 1][:, :, ::5]
+    input = torch.cat((input1, input2), dim=1)[:, :, 1:101]
+
+    if normalize == True:
+        return z_score_normalize_v2(input)
+    return input
+
+
+def preprocess_inputs_v3(input1, input2, normalize=True):
+    input1, input2 = input1.squeeze(1).permute(0, 2, 1), input2.squeeze(1).permute(0, 2, 1)
+    input2 = input2.repeat_interleave(5, dim=-1)
+    input2 = torch.cat((input2[:, :, 0:1], input2, input2[:, :, -2:-1]), dim=-1)
+    input = torch.cat((input1, input2), dim=1)
+
+    if normalize == True:
+        return z_score_normalize_v2(input)
+    return input
 
 
 if __name__ == '__main__':

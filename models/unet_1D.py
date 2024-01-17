@@ -1,4 +1,3 @@
-from typing import Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,11 +8,11 @@ class DoubleConv(nn.Sequential):
         if mid_channels is None:
             mid_channels = out_channels
         super(DoubleConv, self).__init__(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(mid_channels),
+            nn.Conv1d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm1d(mid_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.Conv1d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm1d(out_channels),
             nn.ReLU(inplace=True)
         )
 
@@ -21,9 +20,7 @@ class DoubleConv(nn.Sequential):
 class Down(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(Down, self).__init__(
-            # nn.MaxPool2d(kernel_size=(2, 1)),
-
-            nn.MaxPool2d(kernel_size=(1, 2)),   # 输入数据形状: batch_size*12*512
+            nn.MaxPool1d(kernel_size=2),
             DoubleConv(in_channels, out_channels)
         )
 
@@ -31,18 +28,17 @@ class Down(nn.Sequential):
 class Up(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(Up, self).__init__()
-        self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=3, stride=2, padding=1, output_padding=0)
+        self.up = nn.ConvTranspose1d(in_channels, in_channels // 2, kernel_size=3, stride=2, padding=1,
+                                     output_padding=1)
         self.conv = DoubleConv(in_channels, out_channels)
 
     def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
         x1 = self.up(x1)
-        # [N, C, H, W]
-        diff_y = x2.size()[2] - x1.size()[2]
-        diff_x = x2.size()[3] - x1.size()[3]
+        # [N, C, L]
+        diff_length = x2.size()[2] - x1.size()[2]
 
-        # padding_left, padding_right, padding_top, padding_bottom
-        x1 = F.pad(x1, [diff_x // 2, diff_x - diff_x // 2,
-                        diff_y // 2, diff_y - diff_y // 2])
+        # padding_left, padding_right
+        x1 = F.pad(x1, [diff_length // 2, diff_length - diff_length // 2])
 
         x = torch.cat([x2, x1], dim=1)
         x = self.conv(x)
@@ -52,16 +48,16 @@ class Up(nn.Module):
 class OutConv(nn.Sequential):
     def __init__(self, in_channels, num_classes):
         super(OutConv, self).__init__(
-            nn.Conv2d(in_channels, num_classes, kernel_size=1)
+            nn.Conv1d(in_channels, num_classes, kernel_size=1)
         )
 
 
-class UNet(nn.Module):
+class UNet1D(nn.Module):
     def __init__(self,
-                 in_channels: int = 1,
-                 num_classes: int = 1,
+                 in_channels: int = 12,
+                 num_classes: int = 12,
                  base_c: int = 64):
-        super(UNet, self).__init__()
+        super(UNet1D, self).__init__()
         self.in_channels = in_channels
         self.num_classes = num_classes
 
@@ -76,7 +72,7 @@ class UNet(nn.Module):
         self.up4 = Up(base_c * 2, base_c)
         self.out_conv = OutConv(base_c, num_classes)
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x1 = self.in_conv(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
@@ -89,7 +85,8 @@ class UNet(nn.Module):
         x = self.out_conv(x1)
         return x
 
-# net = UNet(base_c=8)
-# x = torch.rand(size=(1, 1, 512, 6))
-# x_hat = net(x)
+
+net = UNet1D()
+x = torch.rand(size=(16, 12, 512))
+x_hat = net(x)
 # print(x_hat.shape)

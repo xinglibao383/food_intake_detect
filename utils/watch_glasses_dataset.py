@@ -3,14 +3,19 @@ import numpy as np
 import scipy.io
 import torch
 from torch.utils.data import Dataset, DataLoader
-from utils import data_segment_v2, commons
+from utils import data_segment_v2, commons, load_supplementary_data
 
 
 class WatchGlassesDataset(Dataset):
     def __init__(self, data_watch, data_glasses, targets, transform=None):
+        """
         self.data_watch = data_watch
         self.data_glasses = data_glasses
         self.targets = targets
+        """
+        self.data_watch = torch.tensor(data_watch, dtype=torch.float32)
+        self.data_glasses = torch.tensor(data_glasses, dtype=torch.float32)
+        self.targets = torch.tensor(targets, dtype=torch.float32)
         self.transform = transform
 
     def __len__(self):
@@ -94,6 +99,7 @@ def load_data(pre_or_post, use_for_final_test=False):
         # test_eat_data_watch, test_eat_data_glasses, test_eat_data_label = load_data_from_disk(load_parent_path, sample_length, False, True)
         # test_not_eat_data_watch, test_not_eat_data_glasses, test_not_eat_data_label = load_data_from_disk(load_parent_path, sample_length, False, False)
         # 将用于训练的非进食数据（实际上并不会用于训练）用于测试（包括进食和非进食）
+        """
         train_not_eat_data = load_data_from_disk(load_parent_path, sample_length, True, False)
         test_eat_data = load_data_from_disk(load_parent_path, sample_length, False, True)
         test_not_eat_data = load_data_from_disk(load_parent_path, sample_length, False, False)
@@ -102,6 +108,12 @@ def load_data(pre_or_post, use_for_final_test=False):
                      for data1, data2, data3 in zip(train_not_eat_data, test_eat_data, test_not_eat_data)]
         print(f"共载入 {test_data[0].shape[0]} 条进食和非进食数据用于最终测试, 其中包含 {test_eat_data[0].shape[0]} 条进食数据")
         return DataLoader(WatchGlassesDataset(*test_data), batch_size, shuffle=False, num_workers=num_workers)
+        """
+        test_eat_data = load_data_from_disk(load_parent_path, sample_length, False, True)
+        test_not_eat_data = load_supplementary_data.load()
+        test_data = [np.concatenate((data1, data2), axis=0) for data1, data2 in zip(test_eat_data, test_not_eat_data)]
+        print(f"共载入 {test_data[0].shape[0]} 条进食和非进食数据用于最终测试, 其中包含 {test_eat_data[0].shape[0]} 条进食数据")
+        return DataLoader(WatchGlassesDataset(*test_data), batch_size, shuffle=True, num_workers=num_workers)
 
     # train_data_watch, train_data_glasses, train_data_label
     train_data = load_data_from_disk(load_parent_path, sample_length, True, True)

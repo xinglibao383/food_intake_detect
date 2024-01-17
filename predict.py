@@ -1,7 +1,8 @@
-from utils import commons, dual_path_predictor
+from utils import commons, dual_path_predictor, predictor
 
 
 if __name__ == '__main__':
+    """
     category_names = commons.get_classify_category_names()
 
     config_yaml = commons.load_config_yaml()
@@ -15,6 +16,10 @@ if __name__ == '__main__':
                   "post_model_train_id": post_model_train_id}
 
     dual_path_predictor.DualPathPredictor(config_map)
+    """
+    
+    predictor.Predictor()
+
 
 
     """

@@ -59,7 +59,7 @@ def plot_confusion_matrix(model, test_iter):
 
 if __name__ == '__main__':
     model = torch.nn.DataParallel(dual_path_resnet.DualPathResNet())
-    weight_file_path = r"F:\PyCharmProjects\food_intake_detect\weights\post_model\2023_11_22_16_24_01\epoch_10.pth"
+    weight_file_path = r"F:\PyCharmProjects\food_intake_detect\weights\post_model\2023_11_26_20_59_39\best_model_weights.pth"
     state_dict = torch.load(weight_file_path)
     model.load_state_dict(state_dict)
     _, test_iter = watch_glasses_dataset.load_data('post')

@@ -35,7 +35,7 @@ class DualPathPredictor:
             sample_count.add(num_sample, num_eat_sample, num_not_eat_sample)
             print(f"batch_{i:03d}: 共 {num_sample} 个样本, 其中包含 {num_eat_sample} 个进食样本和 {num_not_eat_sample} 个非进食样本")
 
-            pre_model_result_mask, post_model_result = [temp.to('cpu') if temp is not None else temp for temp in self.predict_batch(X)]
+            pre_model_result_mask, post_model_result = [temp.to('cpu') if temp is not None else temp for temp in self.predict_batch(X, False)]
             batch_success1_eat = [b1 == b2 and b1 == True for b1, b2 in zip(if_sample_is_eat, pre_model_result_mask)].count(True)
             batch_success1_not_eat = [b1 == b2 and b1 == False for b1, b2 in zip(if_sample_is_eat, pre_model_result_mask)].count(True)
 
@@ -67,9 +67,8 @@ class DualPathPredictor:
         print(f"M1 + M2 成功分类 {int(metric[1]) + int(metric[2])} 个样本, 准确率为 {(int(metric[1]) + int(metric[2])) / int(sample_count[0]) * 100:.2f}%")
 
 
-    def predict_batch(self, data, mask_or_not=False):
+    def predict_batch(self, data, mask_or_not=True):
         with torch.no_grad():
-            batch_size = data[0].shape[0]
             data = [x.to(self.device) for x in data]
             if mask_or_not:
                 data_masked = [commons.apply_random_mask(x.clone(), self.mask_percentage, self.device) for x in data]
@@ -82,7 +81,7 @@ class DualPathPredictor:
             # dual_loss = [self.loss_function(x_hat.view(batch_size, -1), x.view(batch_size, -1)) for x_hat, x in zip(pre_model_result, data)]
             # dual_loss = [torch.mean(loss, dim=1) for loss in dual_loss]
             # loss = dual_loss[0] + dual_loss[1]
-            print(loss)
+            # print(loss)
             pre_model_result_mask = (loss < self.config['threshold']).to(self.device)
             data = [x[pre_model_result_mask] for x in data]
 
