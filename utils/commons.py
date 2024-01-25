@@ -173,6 +173,17 @@ def preprocess_inputs_v3(input1, input2, normalize=True):
     return input
 
 
+def preprocess_inputs_experiment(input1, input2, mode="up_sample"):
+    if mode == "watch":
+        return input1.squeeze(1).permute(0, 2, 1)
+    elif mode == "glasses":
+        return input2.squeeze(1).permute(0, 2, 1)
+    elif mode == "up_sample":
+        return preprocess_inputs_v3(input1, input2, False)
+    elif mode == "down_sample":
+        return preprocess_inputs_v2(input1, input2, False)
+
+
 if __name__ == '__main__':
     # config = load_config_yaml()
     # print(config)

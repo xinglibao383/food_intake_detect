@@ -202,8 +202,7 @@ def save_114_data(parent_path, data, category_index, person_index, train):
     # executor.shutdown()
 
 
-
-def save_all_data(data_save_root_path, sample_length, stride, cross_person, train_person_num, train_ratio):
+def save_all_data(data_save_root_path, sample_length, stride, cross_person, test_person_index, train_ratio):
     # 加载配置文件并读取配置信息
     config = commons.load_config_yaml()
     original_data_root_path = config['data']['original_data']['root_path']
@@ -242,7 +241,7 @@ def save_all_data(data_save_root_path, sample_length, stride, cross_person, trai
 
             if cross_person:
                 # 划分训练数据与验证数据
-                is_train_person = j <= train_person_num
+                is_train_person = (j != test_person_index)
                 save_114_data(data_save_root_path, data, i, j, is_train_person)
             else:
                 # 划分训练数据与验证数据

@@ -1,9 +1,9 @@
 import torch
 import itertools
-from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
-
+from torch import nn
+from sklearn.metrics import confusion_matrix
 from models import dual_path_resnet
 from utils import commons, watch_glasses_dataset
 
@@ -35,16 +35,25 @@ def plot(cm, classes, normalize=True, title='Confusion matrix', cmap=plt.cm.Blue
     plt.xlabel('Predicted label')
 
 
-def plot_confusion_matrix(model, test_iter):
-    model.eval()
+def plot_confusion_matrix(net, test_iter, device=None):
+    if isinstance(net, nn.Module):
+        net.eval()  # 设置为评估模式
+        if not device:
+            device = next(iter(net.parameters())).device
+
     all_preds = []
     all_labels = []
 
     with torch.no_grad():
-        for inputs, labels in test_iter:
-            outputs = model(inputs)
-            preds = torch.argmax(outputs, dim=1)
-            labels = torch.argmax(labels, dim=1)
+        for X, y in test_iter:
+            if isinstance(X, list):
+                X = commons.preprocess_inputs_experiment(*X)
+            X = X.to(device)
+            y = y.to(device)
+            y_hat = net(X)
+
+            labels = torch.argmax(y, dim=1)
+            preds = torch.argmax(y_hat, dim=1)
 
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())

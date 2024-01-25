@@ -22,8 +22,8 @@ train:
   dataset:
     sample_length: 512
     stride: 128
-    cross_person: False
-    train_person_num: 8
+    cross_person: True
+    test_person_index: 8
     train_ratio: 0.8
   pre_model:
     base_c_watch: 32

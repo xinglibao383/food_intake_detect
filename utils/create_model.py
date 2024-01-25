@@ -7,8 +7,11 @@ def get_unet(base_c=64):
     return unet.UNet(base_c)
 
 
-def get_unet_1d(base_c=64):
-    return unet_1D.UNet1D(base_c=base_c)
+def get_unet_1d(base_c=64, mode="up_sample"):
+    if mode in ["watch", "glasses"]:
+        return unet_1D.UNet1D(base_c=base_c, in_channels=6, num_classes=6)
+    elif mode in ["up_sample", "down_sample"]:
+        return unet_1D.UNet1D(base_c=base_c, in_channels=12, num_classes=12)
 
 
 def get_segformer():
@@ -89,8 +92,38 @@ def get_swin_transformer_v2_1d():
                                                     norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
                                                     use_checkpoint=False, pretrained_window_sizes=[0, 0, 0, 0])
 
-
     return net
+
+
+def get_swin_transformer_v2_1d_experiment(mode="up_sample"):
+    if mode == "watch":
+        return SwinTransformerV2_1D.SwinTransformerV2_1D(seq_len=512, patch_size=4, in_chans=6, num_classes=11,
+                                                         embed_dim=128, depths=[1, 1, 2, 1], num_heads=[1, 2, 4, 8],
+                                                         window_size=16, mlp_ratio=2., qkv_bias=True,
+                                                         drop_rate=0.5, attn_drop_rate=0.4, drop_path_rate=0.4,
+                                                         norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
+                                                         use_checkpoint=False, pretrained_window_sizes=[0, 0, 0, 0])
+    elif mode == "glasses":
+        return SwinTransformerV2_1D.SwinTransformerV2_1D(seq_len=102, patch_size=4, in_chans=6, num_classes=11,
+                                                         embed_dim=128, depths=[1, 1, 2, 1], num_heads=[1, 2, 4, 8],
+                                                         window_size=16, mlp_ratio=2., qkv_bias=True,
+                                                         drop_rate=0.5, attn_drop_rate=0.4, drop_path_rate=0.4,
+                                                         norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
+                                                         use_checkpoint=False, pretrained_window_sizes=[0, 0, 0, 0])
+    elif mode == "up_sample":
+        return SwinTransformerV2_1D.SwinTransformerV2_1D(seq_len=512, patch_size=4, in_chans=12, num_classes=11,
+                                                         embed_dim=128, depths=[1, 1, 2, 1], num_heads=[1, 2, 4, 8],
+                                                         window_size=16, mlp_ratio=2., qkv_bias=True,
+                                                         drop_rate=0.5, attn_drop_rate=0.4, drop_path_rate=0.4,
+                                                         norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
+                                                         use_checkpoint=False, pretrained_window_sizes=[0, 0, 0, 0])
+    elif mode == "down_sample":
+        return SwinTransformerV2_1D.SwinTransformerV2_1D(seq_len=100, patch_size=4, in_chans=12, num_classes=11,
+                                                         embed_dim=128, depths=[1, 1, 2, 1], num_heads=[1, 2, 4, 8],
+                                                         window_size=16, mlp_ratio=2., qkv_bias=True,
+                                                         drop_rate=0.5, attn_drop_rate=0.4, drop_path_rate=0.4,
+                                                         norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
+                                                         use_checkpoint=False, pretrained_window_sizes=[0, 0, 0, 0])
 
 
 def get_swin_transformer():

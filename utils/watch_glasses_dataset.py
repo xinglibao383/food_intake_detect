@@ -73,14 +73,14 @@ def load_data_from_disk(dir_root_path, sample_length, train, eat=True):
     return np.array(data_watch), np.array(data_glasses), np.array(data_label)
 
 
-def load_data(pre_or_post, use_for_final_test=False):
+def load_data(pre_or_post, cross_person=False, use_for_final_test=False, use_for_confusion_matrix=False, test_person_index=None):
     config = commons.load_config_yaml()
 
     generated_data_save_path = config['data']['generated_data']['save_path']
     sample_length = config['train']['dataset']['sample_length']
     stride = config['train']['dataset']['stride']
-    cross_person = config['train']['dataset']['cross_person']
-    train_person_num = config['train']['dataset']['train_person_num']
+    # cross_person = config['train']['dataset']['cross_person']
+    # test_person_index = config['train']['dataset']['test_person_index']
     train_ratio = config['train']['dataset']['train_ratio']
 
     if_pre = 'pre_model' if pre_or_post == 'pre' else 'post_model'
@@ -89,11 +89,11 @@ def load_data(pre_or_post, use_for_final_test=False):
     num_workers = config['train'][if_pre]['data_loader']['num_workers']
 
     if cross_person:
-        load_parent_path = os.path.join(generated_data_save_path, f"{sample_length}_{stride}_{train_person_num}_cross_person")
+        load_parent_path = os.path.join(generated_data_save_path, f"{sample_length}_{stride}_{test_person_index}_cross_person")
     else:
         load_parent_path = os.path.join(generated_data_save_path, f"{sample_length}_{stride}_{train_ratio}_not_cross_person")
     if not os.path.exists(load_parent_path):
-        data_segment_v2.save_all_data(load_parent_path, sample_length, stride, cross_person, train_person_num, train_ratio)
+        data_segment_v2.save_all_data(load_parent_path, sample_length, stride, cross_person, test_person_index, train_ratio)
 
     if use_for_final_test:
         # test_eat_data_watch, test_eat_data_glasses, test_eat_data_label = load_data_from_disk(load_parent_path, sample_length, False, True)
@@ -113,7 +113,10 @@ def load_data(pre_or_post, use_for_final_test=False):
         test_not_eat_data = load_supplementary_data.load()
         test_data = [np.concatenate((data1, data2), axis=0) for data1, data2 in zip(test_eat_data, test_not_eat_data)]
         print(f"共载入 {test_data[0].shape[0]} 条进食和非进食数据用于最终测试, 其中包含 {test_eat_data[0].shape[0]} 条进食数据")
-        return DataLoader(WatchGlassesDataset(*test_data), batch_size, shuffle=True, num_workers=num_workers)
+        return DataLoader(WatchGlassesDataset(*test_data), batch_size, shuffle=False, num_workers=num_workers)
+    elif use_for_confusion_matrix:
+        test_eat_data = load_data_from_disk(load_parent_path, sample_length, False, True)
+        return DataLoader(WatchGlassesDataset(*test_eat_data), batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
     # train_data_watch, train_data_glasses, train_data_label
     train_data = load_data_from_disk(load_parent_path, sample_length, True, True)

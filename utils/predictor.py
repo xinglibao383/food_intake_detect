@@ -2,23 +2,30 @@ import torch
 import time
 import torch.nn as nn
 from datetime import datetime
+from models.Autoencoder_1D import Autoencoder
+from models.resnet_1D import *
 from utils import commons, watch_glasses_dataset, create_model
 from d2l import torch as d2l
 
 
 class Predictor:
-    def __init__(self, train_id1, train_id2, mask_percentage, threshold):
+    def __init__(self, train_id1, train_id2, mask_percentage, threshold, cross_person=False, mode="up_sample"):
         self.device = d2l.try_gpu(0)
         self.loss_function = nn.MSELoss(reduction='none')
-        self.data_iter = watch_glasses_dataset.load_data(None, True)
-        self.pre_model = commons.load_the_best_weights(create_model.get_unet_1d(base_c=128), train_id1, "pre").to(self.device).eval()
+        self.data_iter = watch_glasses_dataset.load_data(None, cross_person=cross_person, use_for_final_test=True)
+        self.pre_model = commons.load_the_best_weights(create_model.get_unet_1d(base_c=128, mode=mode), train_id1, "pre").to(self.device).eval()
+        # self.pre_model = commons.load_the_best_weights(Autoencoder(dropout=0.2), train_id1, "pre").to(self.device).eval()
         self.mask_percentage = mask_percentage
         self.threshold = threshold
         """
             使用归一化 2024_01_08_12_28_18
             不使用归一化 2024_01_12_16_51_48
         """
-        self.post_model = commons.load_the_best_weights(create_model.get_swin_transformer_v2_1d(), train_id2, "post").to(self.device).eval()
+        # todo
+        # self.post_model = commons.load_the_best_weights(create_model.get_swin_transformer_v2_1d(), train_id2, "post").to(self.device).eval()
+        self.mode = mode
+        # self.post_model = commons.load_the_best_weights(create_model.get_swin_transformer_v2_1d_experiment(self.mode), train_id2, "post").to(self.device).eval()
+        self.post_model = commons.load_the_best_weights(resnet(), train_id2, "post").to(self.device).eval()
         self.category_names = commons.get_classify_category_names()
 
     def predict(self):
@@ -34,7 +41,7 @@ class Predictor:
             num_sample, num_eat_sample, num_not_eat_sample = X[0].shape[0], torch.sum(
                 if_sample_is_eat).item(), torch.sum(if_sample_is_not_eat).item()
             sample_count.add(num_sample, num_eat_sample, num_not_eat_sample)
-            # print(f"batch_{i:03d}: 共 {num_sample} 个样本, 其中包含 {num_eat_sample} 个进食样本和 {num_not_eat_sample} 个非进食样本")
+            print(f"batch_{i:03d}: 共 {num_sample} 个样本, 其中包含 {num_eat_sample} 个进食样本和 {num_not_eat_sample} 个非进食样本")
 
             start_time = time.time()
             pre_model_result_mask, post_model_result = [temp.to('cpu') if temp is not None else temp for temp in self.predict_batch(X, True)]
@@ -46,7 +53,7 @@ class Predictor:
 
             if post_model_result is None:
                 metric.add(batch_success1_eat, batch_success1_not_eat, 0)
-                # print(f"batch_{i:03d}: 成功区分 {batch_success1_eat} 个进食样本和 {batch_success1_not_eat} 个非进食样本, 模型成功分类 0 个进食样本")
+                print(f"batch_{i:03d}: 成功区分 {batch_success1_eat} 个进食样本和 {batch_success1_not_eat} 个非进食样本, 模型成功分类 0 个进食样本")
             else:
                 y = y[pre_model_result_mask]
                 y_max_values, y_argmax_indices = torch.max(y, dim=1)
@@ -56,7 +63,7 @@ class Predictor:
                 predicted_labels = [self.category_names[k] for k in torch.argmax(post_model_result, dim=1)]
                 batch_success2 = [l1 == l2 for l1, l2 in zip(real_labels, predicted_labels)].count(True)
                 metric.add(batch_success1_eat, batch_success1_not_eat, batch_success2)
-                # print(f"batch_{i:03d}: 成功区分 {batch_success1_eat} 个进食样本和 {batch_success1_not_eat} 个非进食样本, 模型成功分类 {batch_success2} 个进食样本")
+                print(f"batch_{i:03d}: 成功区分 {batch_success1_eat} 个进食样本和 {batch_success1_not_eat} 个非进食样本, 模型成功分类 {batch_success2} 个进食样本")
 
         messages = [f"共计 {int(sample_count[0])} 个样本, 其中 {int(sample_count[1])} 个进食样本, {int(sample_count[2])} 个非进食样本",
                    f"M1 成功区分 {int(metric[0]) + int(metric[1])} 个样本, 准确率为 {(int(metric[0]) + int(metric[1])) / int(sample_count[0]) * 100:.2f}%",
@@ -75,7 +82,8 @@ class Predictor:
             # data = commons.preprocess_inputs(*data, channel_num=3).to(self.device)
             # data = commons.preprocess_inputs_v2(*data).to(self.device)
             # todo
-            data = commons.preprocess_inputs_v3(*data, normalize=False).to(self.device)
+            # data = commons.preprocess_inputs_v3(*data, normalize=False).to(self.device)
+            data = commons.preprocess_inputs_experiment(*data, mode=self.mode).to(self.device)
             if mask_or_not:
                 data_masked = commons.apply_random_mask(data, self.mask_percentage, self.device)
                 pre_model_result = self.pre_model(data_masked)
@@ -85,7 +93,7 @@ class Predictor:
             # loss = self.loss_function(data, pre_model_result).mean(dim=(1, 2, 3))
             # todo
             loss = self.loss_function(data, pre_model_result).mean(dim=(1, 2))
-            # print(loss)
+            print(loss)
             pre_model_result_mask = (loss < self.threshold).to(self.device)
             data = data[pre_model_result_mask]
 
